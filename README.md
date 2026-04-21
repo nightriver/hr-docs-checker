@@ -52,6 +52,3 @@ sudo apt-get install fonts-dejavu-core
 - Streamlit >= 1.35.0
 - fpdf2 >= 2.7.9
 
-## Клієнт
-
-[Smart Solutions](https://smart-hr.com.ua/) — HR-провайдер №1 в Україні
