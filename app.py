@@ -220,7 +220,7 @@ elif step > TOTAL_STEPS:
 
     with col_pdf:
         try:
-            pdf_bytes = build_pdf(docs)
+            pdf_bytes = build_pdf(docs, instructions=INSTRUCTIONS)
             st.download_button(
                 label="📥 Завантажити PDF",
                 data=pdf_bytes,
@@ -232,7 +232,7 @@ elif step > TOTAL_STEPS:
             st.warning(f"PDF недоступний: {e}")
 
     with col_txt:
-        txt_data = build_txt(docs)
+        txt_data = build_txt(docs, instructions=INSTRUCTIONS)
         st.download_button(
             label="📄 Завантажити TXT",
             data=txt_data.encode("utf-8"),

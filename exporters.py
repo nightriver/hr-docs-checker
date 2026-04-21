@@ -38,7 +38,7 @@ def _ensure_fonts() -> bool:
     return True
 
 
-def build_txt(docs: list) -> str:
+def build_txt(docs: list, instructions: dict = None) -> str:
     lines = ["Перелік документів для працевлаштування", "=" * 44, ""]
     for i, doc in enumerate(docs, start=1):
         lines.append(f"{i}. {doc['title']}")
@@ -47,14 +47,26 @@ def build_txt(docs: list) -> str:
         if doc.get("hr_note"):
             lines.append(f"   Примітка: {doc['hr_note']}")
         lines.append("")
+
+    # Інструкції в кінці TXT
+    if instructions:
+        for doc in docs:
+            key = doc.get("instruction_key")
+            if key and key in instructions:
+                lines.append("=" * 44)
+                lines.append(f"Як отримати: {doc['title']}")
+                lines.append("=" * 44)
+                for step_i, step_text in enumerate(instructions[key], start=1):
+                    lines.append(f"  {step_i}. {step_text}")
+                lines.append("")
+
     return "\n".join(lines)
 
 
-def build_pdf(docs: list) -> bytes:
+def build_pdf(docs: list, instructions: dict = None) -> bytes:
     fonts_ok = _ensure_fonts()
 
     pdf = FPDF()
-    # Встановити відступи ДО add_page — критично для fpdf2 2.7+
     pdf.set_left_margin(15)
     pdf.set_right_margin(15)
     pdf.set_top_margin(15)
@@ -74,14 +86,15 @@ def build_pdf(docs: list) -> bytes:
         font_name = "Helvetica"
         def t(text): return _translit(text)
 
-    # Явна ширина рядка; new_x/new_y скидають курсор після кожної клітинки
     W = pdf.w - pdf.l_margin - pdf.r_margin
     NX, NY = "LMARGIN", "NEXT"
 
+    # ── Заголовок ──
     pdf.set_font(font_name, "B", 14)
     pdf.multi_cell(W, 10, t("Перелік документів для працевлаштування"), new_x=NX, new_y=NY)
     pdf.ln(4)
 
+    # ── Список документів ──
     for i, doc in enumerate(docs, start=1):
         pdf.set_font(font_name, "B", 11)
         pdf.multi_cell(W, 8, t(f"{i}. {doc['title']}"), new_x=NX, new_y=NY)
@@ -96,5 +109,39 @@ def build_pdf(docs: list) -> bytes:
             pdf.set_text_color(0, 0, 0)
 
         pdf.ln(3)
+
+    # ── Розділ з інструкціями ──
+    if instructions:
+        docs_with_instructions = [d for d in docs if d.get("instruction_key") and d["instruction_key"] in instructions]
+        if docs_with_instructions:
+            pdf.add_page()
+            pdf.set_font(font_name, "B", 13)
+            pdf.multi_cell(W, 10, t("Інструкції для отримання документів"), new_x=NX, new_y=NY)
+            pdf.ln(2)
+
+            # Горизонтальна лінія
+            pdf.set_draw_color(255, 209, 0)  # #FFD100
+            pdf.set_line_width(0.8)
+            pdf.line(pdf.l_margin, pdf.y, pdf.w - pdf.r_margin, pdf.y)
+            pdf.ln(6)
+
+            for doc in docs_with_instructions:
+                key = doc["instruction_key"]
+                steps = instructions[key]
+
+                pdf.set_font(font_name, "B", 11)
+                pdf.multi_cell(W, 8, t(f"Як отримати: {doc['title']}"), new_x=NX, new_y=NY)
+                pdf.ln(2)
+
+                pdf.set_font(font_name, "", 10)
+                for step_i, step_text in enumerate(steps, start=1):
+                    # Номер кроку + текст
+                    pdf.set_font(font_name, "B", 10)
+                    num_w = 8
+                    pdf.cell(num_w, 7, t(f"{step_i}."))
+                    pdf.set_font(font_name, "", 10)
+                    pdf.multi_cell(W - num_w, 7, t(step_text), new_x=NX, new_y=NY)
+
+                pdf.ln(5)
 
     return bytes(pdf.output())
