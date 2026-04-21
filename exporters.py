@@ -54,7 +54,7 @@ def build_pdf(docs: list) -> bytes:
     fonts_ok = _ensure_fonts()
 
     pdf = FPDF()
-    # Set margins BEFORE add_page — критично для fpdf2 2.7+
+    # Встановити відступи ДО add_page — критично для fpdf2 2.7+
     pdf.set_left_margin(15)
     pdf.set_right_margin(15)
     pdf.set_top_margin(15)
@@ -74,23 +74,27 @@ def build_pdf(docs: list) -> bytes:
         font_name = "Helvetica"
         def t(text): return _translit(text)
 
-    # Явна ширина — обов'язково, 0 може дати помилку в деяких версіях fpdf2
+    # Явна ширина рядка; new_x/new_y скидають курсор після кожної клітинки
     W = pdf.w - pdf.l_margin - pdf.r_margin
+    NX, NY = "LMARGIN", "NEXT"
 
     pdf.set_font(font_name, "B", 14)
-    pdf.multi_cell(W, 10, t("Перелік документів для працевлаштування"))
+    pdf.multi_cell(W, 10, t("Перелік документів для працевлаштування"), new_x=NX, new_y=NY)
     pdf.ln(4)
 
     for i, doc in enumerate(docs, start=1):
         pdf.set_font(font_name, "B", 11)
-        pdf.multi_cell(W, 8, t(f"{i}. {doc['title']}"))
+        pdf.multi_cell(W, 8, t(f"{i}. {doc['title']}"), new_x=NX, new_y=NY)
+
         pdf.set_font(font_name, "", 10)
-        pdf.multi_cell(W, 7, t(f"Що надати: {doc['details']}"))
-        pdf.multi_cell(W, 7, t(f"Формат: {doc['format']}"))
+        pdf.multi_cell(W, 7, t(f"Що надати: {doc['details']}"), new_x=NX, new_y=NY)
+        pdf.multi_cell(W, 7, t(f"Формат: {doc['format']}"), new_x=NX, new_y=NY)
+
         if doc.get("hr_note"):
             pdf.set_text_color(100, 100, 100)
-            pdf.multi_cell(W, 7, t(f"Примітка: {doc['hr_note']}"))
+            pdf.multi_cell(W, 7, t(f"Примітка: {doc['hr_note']}"), new_x=NX, new_y=NY)
             pdf.set_text_color(0, 0, 0)
+
         pdf.ln(3)
 
     return bytes(pdf.output())
