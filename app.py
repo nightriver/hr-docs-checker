@@ -1,4 +1,5 @@
 import streamlit as st
+import base64, os
 from documents import build_documents
 from instructions import INSTRUCTIONS
 from exporters import build_txt, build_pdf
@@ -40,13 +41,19 @@ def reset_app():
     st.session_state.clear()
 
 
-# ─── Хедер ────────────────────────────────────────────────────
-st.markdown("""
-<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
-    <div style="background:#FFD100;border-radius:8px;padding:6px 14px;font-weight:800;font-size:22px;color:#1A1A1A;letter-spacing:1px;">
-        Smart<span style="color:#E8312A;">Solutions</span>
-    </div>
-    <div style="font-size:15px;color:#555;">HR-опитувальник документів</div>
+# ─── Логотип ──────────────────────────────────────────────────
+_logo_path = os.path.join(os.path.dirname(__file__), "assets", "logo.svg")
+try:
+    with open(_logo_path, "rb") as _f:
+        _logo_b64 = base64.b64encode(_f.read()).decode("utf-8")
+    _logo_html = f'<img src="data:image/svg+xml;base64,{_logo_b64}" style="height:48px;">'
+except Exception:
+    _logo_html = '<span style="font-weight:800;font-size:22px;color:#1A1A1A;">Smart<span style="color:#E8312A;">Solutions</span></span>'
+
+st.markdown(f"""
+<div style="display:flex;align-items:center;gap:14px;margin-bottom:8px;">
+    {_logo_html}
+    <div style="font-size:15px;color:#555;margin-left:4px;">HR-опитувальник документів</div>
 </div>
 <hr style="border:none;border-top:2px solid #FFD100;margin-bottom:20px;">
 """, unsafe_allow_html=True)
@@ -54,7 +61,7 @@ st.markdown("""
 
 # ─── Рендер картки документа ──────────────────────────────────
 def render_doc_card(doc: dict):
-    icon = "🔴" if doc["important"] else "🔵"
+    icon = "🟢" if doc["important"] else "🔵"
     st.markdown(f"""
         <div class="doc-card">
             <div class="doc-title">{icon} {doc["title"]}</div>
@@ -168,8 +175,9 @@ elif step == 5:
 # ── Крок 6 ──
 elif step == 6:
     st.subheader("Чи маєте ви додаткові статуси?")
-    st.caption("Оберіть усі, що стосуються вас (можна не обирати жодного).")
-    options6 = [
+    st.caption("Позначте все, що стосується вас. Якщо жодне не підходить — просто натисніть «Сформувати перелік».")
+
+    OPTIONS_6 = [
         "Пенсіонер",
         "Постраждалий від ЧАЕС",
         "ВПО (внутрішньо переміщена особа)",
@@ -177,14 +185,14 @@ elif step == 6:
         "Одинока мати або батько",
         "Маю дитину з інвалідністю",
     ]
-    val = st.multiselect(
-        "Оберіть статуси:",
-        options6,
-        default=st.session_state.answers.get("extra_statuses", []),
-        key="ms_statuses",
-        label_visibility="collapsed",
-    )
-    st.session_state.answers["extra_statuses"] = val
+
+    current = set(st.session_state.answers.get("extra_statuses", []))
+    selected = []
+    for opt in OPTIONS_6:
+        checked = st.checkbox(opt, value=(opt in current), key=f"cb_{opt}")
+        if checked:
+            selected.append(opt)
+    st.session_state.answers["extra_statuses"] = selected
 
 
 # ── Фінальний екран ──
@@ -196,7 +204,7 @@ elif step > TOTAL_STEPS:
     conditional = [d for d in docs if not d["important"]]
 
     if mandatory:
-        st.markdown("### 🔴 Обов'язкові документи (для всіх)")
+        st.markdown("### 🟢 Обов'язкові документи (для всіх)")
         for doc in mandatory:
             render_doc_card(doc)
 
@@ -208,7 +216,7 @@ elif step > TOTAL_STEPS:
     st.markdown("---")
     st.markdown("**Завантажити перелік:**")
 
-    col_pdf, col_txt, col_reset = st.columns(3)
+    col_pdf, col_txt = st.columns(2)
 
     with col_pdf:
         try:
@@ -233,11 +241,11 @@ elif step > TOTAL_STEPS:
             use_container_width=True,
         )
 
-    with col_reset:
-        st.button("🔄 Почати спочатку", on_click=reset_app, use_container_width=True)
+    st.markdown("")
+    st.button("🔄 Почати спочатку", on_click=reset_app, use_container_width=True)
 
     st.markdown("---")
-    st.caption("🔴 — обов'язковий для всіх &nbsp;&nbsp; 🔵 — потрібен за вашою ситуацією")
+    st.caption("🟢 — обов'язковий для всіх &nbsp;&nbsp; 🔵 — потрібен за вашою ситуацією")
     st.stop()
 
 

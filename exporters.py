@@ -18,6 +18,8 @@ def build_txt(docs: list) -> str:
 
 def build_pdf(docs: list) -> bytes:
     pdf = FPDF()
+    pdf.set_margins(left=15, top=15, right=15)
+    pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
     pdf.add_font("DejaVu", "", os.path.join(FONTS_DIR, "DejaVuSans.ttf"), uni=True)
     pdf.add_font("DejaVu", "B", os.path.join(FONTS_DIR, "DejaVuSans-Bold.ttf"), uni=True)
@@ -28,6 +30,7 @@ def build_pdf(docs: list) -> bytes:
 
     for i, doc in enumerate(docs, start=1):
         pdf.set_font("DejaVu", "B", 11)
+        label = "🟢" if doc["important"] else "🔵"
         pdf.multi_cell(0, 8, f"{i}. {doc['title']}")
         pdf.set_font("DejaVu", "", 10)
         pdf.multi_cell(0, 7, f"Що надати: {doc['details']}")
