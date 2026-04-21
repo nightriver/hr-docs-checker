@@ -1,6 +1,8 @@
 from fpdf import FPDF
 import os
 import urllib.request
+import shutil
+import tempfile
 
 FONTS_DIR = os.path.join(os.path.dirname(__file__), "assets", "fonts")
 
@@ -26,14 +28,29 @@ def _translit(text: str) -> str:
     return "".join(CYRILLIC_TRANSLIT.get(c, c) for c in text)
 
 
+def _download_font(url: str, dest: str) -> bool:
+    """Скачує шрифт атомарно: спочатку у тимчасовий файл, потім перейменовує.
+    Захищає від пошкодженого файлу при обриві з'єднання."""
+    tmp_path = dest + ".tmp"
+    try:
+        with urllib.request.urlopen(url, timeout=15) as response:
+            with open(tmp_path, "wb") as f:
+                shutil.copyfileobj(response, f)
+        shutil.move(tmp_path, dest)
+        return True
+    except Exception:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+        return False
+
+
 def _ensure_fonts() -> bool:
+    """Перевіряє наявність шрифтів і скачує відсутні. Повертає True якщо обидва є."""
     os.makedirs(FONTS_DIR, exist_ok=True)
     for filename, url in FONT_URLS.items():
         path = os.path.join(FONTS_DIR, filename)
         if not os.path.exists(path):
-            try:
-                urllib.request.urlretrieve(url, path)
-            except Exception:
+            if not _download_font(url, path):
                 return False
     return True
 
@@ -135,7 +152,6 @@ def build_pdf(docs: list, instructions: dict = None) -> bytes:
 
                 pdf.set_font(font_name, "", 10)
                 for step_i, step_text in enumerate(steps, start=1):
-                    # Номер кроку + текст
                     pdf.set_font(font_name, "B", 10)
                     num_w = 8
                     pdf.cell(num_w, 7, t(f"{step_i}."))
